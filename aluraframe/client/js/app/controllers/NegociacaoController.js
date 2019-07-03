@@ -2,6 +2,8 @@ class NegociacaoController {
     
     constructor() {
         
+        this._ordemAtual = '';
+
         let $ = document.querySelector.bind(document);
         
         this._inputData = $('#data');
@@ -11,7 +13,7 @@ class NegociacaoController {
         this._listaNegociacoes = new Bind(
             new ListaNegociacoes(), 
             new NegociacoesView($('#negociacoesView')), 
-            'adiciona', 'esvazia');
+            'adiciona', 'esvazia', 'ordena', 'inverteOrdem');
        
         this._mensagem = new Bind(
             new Mensagem(), new MensagemView($('#mensagemView')),
@@ -28,37 +30,51 @@ class NegociacaoController {
     
     importaNegociacoes(){
 
-        let xhr = new XMLHttpRequest();
+        let service = new NegociacaoService();
+
+        Promise.all([
+            service.obterNegociacoesDaSemana(), 
+            service.obterNegociacoesDaSemanaAnterior(),
+            service.obterNegociacoesDaSemanaRetrasada()]
+        )
+        .then(negociacoes=>{
+            negociacoes
+                .reduce((arrayAchatado, array) => arrayAchatado.concat(array), [])
+                .forEach(negociacao => this._listaNegociacoes.adiciona(negociacao));
+                this._mensagem.texto = 'Negociações obtidas com sucesso';         
+        })
+        .catch(erro=>
+            this._mensagem.texto = erro);
         
-        xhr.open('GET', 'negociacoes/semana');
-        xhr.send();
-        /*
-            0
-            1
-            2
-            3
-            4
-        */
-        xhr.onreadystatechange = () =>{
-            if(xhr.readyState ==4 ){
-                if(xhr.status == 200){
-                    console.log('achei');                    
-                    JSON.parse(xhr.responseText)
-                        .map(objeto=> new Negociacao(new Date(objeto.data), objeto.quantidade, objeto.valor))
-                        .forEach(negociacao => this._listaNegociacoes.adiciona(negociacao));
-                        this._mensagem = "importação realizada com sucesso!";
-                    }
-                else{                    
-                    console.log(xhr.responseText)
-                    this._mensagem = "não achei";
+    }
+    /*
+    exportaNegociacoes(){
+
+        let negociacao = {
+            data: this._inputData.value,
+            quantidade: this._inputQuantidade.value,
+            valor: this._inputValor.value
+        };
+
+        let xhr = new XMLHttpRequest();
+        xhr.open("POST", "/negociacoes", true);
+        xhr.setRequestHeader("Content-type", "application/json");
+
+        xhr.onreadystatechange = () => {
+
+            if (xhr.readyState == 4) {
+
+                if (xhr.status == 200) {                    
+                    console.log('Negociação enviada com sucesso');
+                } else {
+                    console.log(`Não foi possível enviar a negociação: ${xhr.responseText}`);
                 }
-                
-                
             }
         }
-
+        xhr.send(JSON.stringify(negociacao));
     }
-    
+    */
+
     apaga() {
         
         this._listaNegociacoes.esvazia();
@@ -79,5 +95,17 @@ class NegociacaoController {
         this._inputQuantidade.value = 1;
         this._inputValor.value = 0.0;
         this._inputData.focus();   
+    }
+
+    ordena(coluna){
+        
+        console.log('ordena()');
+        
+        if(this._ordemAtual == coluna){
+            this._listaNegociacoes.inverteOrdem();
+        } else{
+            this._listaNegociacoes.ordena((a,b)=> a[coluna] - b[coluna]);
+        }
+        this._ordemAtual = coluna;
     }
 }

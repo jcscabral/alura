@@ -15,12 +15,21 @@ class ListaNegociacoes {
         return [].concat(this._negociacoes);
     }
 
+    get volumeTotal() {
+        return this._negociacoes.reduce((total, n) => total + n.volume, 0.0);
+    }
+
     esvazia() {
         
         this._negociacoes = [];
     }
     
-    get volumeTotal() {
-       return this._negociacoes.reduce((total, n) => total + n.volume, 0.0);
+    ordena(criterio) {
+        console.log('ordena()');
+        this._negociacoes.sort(criterio);
+    }
+    
+    inverteOrdem(criterio) {
+        this._negociacoes.reverse();
     }
 }
